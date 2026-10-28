@@ -8,6 +8,8 @@ const statusLabel: Record<Complaint['status'], string> = { new: 'جديدة', in
 
 export default function App() {
   const [sap, setSap] = useState('');
+  const [pin, setPin] = useState('');
+  const [portalToken, setPortalToken] = useState('');
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [view, setView] = useState<'home' | 'employee' | 'admin'>('home');
@@ -36,8 +38,11 @@ export default function App() {
     if (!supabase || !supabaseConfigured) { setError('التطبيق مربوط بواجهة Supabase، لكن إعدادات المشروع لم تُضف بعد.'); return; }
     setBusy(true);
     try {
-      // This RPC must be deployed with server-side identity verification before showing employee data.
-      const { data, error: rpcError } = await supabase.rpc('employee_portal_lookup', { p_sap_no: sap.trim() });
+      const { data: login, error: loginError } = await supabase.rpc('portal_login', { p_login_id: sap.trim(), p_password: pin });
+      if (loginError) throw loginError;
+      if (!login?.authorized || login?.role !== 'employee') throw new Error('رقم SAP أو رمز الدخول غير صحيح.');
+      setPortalToken(login.token);
+      const { data, error: rpcError } = await supabase.rpc('employee_portal_lookup', { p_sap_no: sap.trim(), p_token: login.token });
       if (rpcError) throw rpcError;
       if (!data?.employee) throw new Error('لم يتم العثور على العامل. راجع رقم SAP مع شؤون العاملين.');
       setEmployee(data.employee as Employee);
@@ -53,7 +58,7 @@ export default function App() {
     if (!supabase || !employee) { setError('يلزم إعداد قاعدة البيانات والتحقق من هوية العامل أولًا.'); return; }
     setBusy(true);
     try {
-      const { data, error: insertError } = await supabase.rpc('employee_submit_complaint', { p_sap_no: employee.sap_no, p_subject: newSubject.trim(), p_body: newBody.trim() });
+      const { data, error: insertError } = await supabase.rpc('employee_submit_complaint', { p_sap_no: employee.sap_no, p_token: portalToken, p_subject: newSubject.trim(), p_body: newBody.trim() });
       if (insertError) throw insertError;
       setComplaints(prev => [data as Complaint, ...prev]);
       setNewSubject(''); setNewBody(''); setNotice('تم إرسال الشكوى بنجاح.');
@@ -66,9 +71,10 @@ export default function App() {
     if (!supabase || !adminSap.trim() || !adminPassword) { setError('أدخل رقم SAP وكلمة المرور بعد إعداد Supabase.'); return; }
     setBusy(true);
     try {
-      const { data, error: authError } = await supabase.rpc('admin_portal_login', { p_sap_no: adminSap.trim(), p_password: adminPassword });
+      const { data, error: authError } = await supabase.rpc('portal_login', { p_login_id: adminSap.trim(), p_password: adminPassword });
       if (authError) throw authError;
-      if (!data?.authorized) throw new Error('بيانات دخول المسؤول غير صحيحة.');
+      if (!data?.authorized || data?.role !== 'admin') throw new Error('بيانات دخول المسؤول غير صحيحة.');
+      setPortalToken(data.token);
       setAdminAuthed(true); setView('admin'); setAdminOpen(false);
       await loadAdminComplaints();
     } catch (e) { setError(e instanceof Error ? e.message : 'تعذر تسجيل الدخول.'); }
@@ -77,7 +83,7 @@ export default function App() {
 
   async function loadAdminComplaints() {
     if (!supabase) return;
-    const { data, error: loadError } = await supabase.rpc('admin_list_complaints');
+    const { data, error: loadError } = await supabase.rpc('admin_list_complaints', { p_token: portalToken });
     if (loadError) { setError(loadError.message); return; }
     setAllComplaints((data ?? []) as (Complaint & { employee?: Employee })[]);
   }
@@ -87,7 +93,7 @@ export default function App() {
     if (!body || !supabase) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const { error: replyError } = await supabase.rpc('admin_reply_to_complaint', { p_complaint_id: id, p_reply: body });
+      const { error: replyError } = await supabase.rpc('admin_reply_to_complaint', { p_token: portalToken, p_complaint_id: id, p_reply: body });
       if (replyError) throw replyError;
       setReplyDrafts(prev => ({ ...prev, [id]: '' }));
       setNotice('تم حفظ الرد.'); await loadAdminComplaints();
@@ -99,7 +105,7 @@ export default function App() {
     if (!supabase) return;
     setBusy(true); setError('');
     try {
-      const { error: statusError } = await supabase.rpc('admin_update_complaint_status', { p_complaint_id: id, p_status: status });
+      const { error: statusError } = await supabase.rpc('admin_update_complaint_status', { p_token: portalToken, p_complaint_id: id, p_status: status });
       if (statusError) throw statusError;
       await loadAdminComplaints(); setNotice('تم تحديث حالة الشكوى.');
     } catch (e) { setError(e instanceof Error ? e.message : 'تعذر تحديث الحالة.'); }
