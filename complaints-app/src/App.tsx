@@ -138,6 +138,17 @@ export default function App() {
       if (!headers[resolvedSapIdx] || !headers[resolvedNameIdx]) throw new Error('لم أستطع تحديد عمودي SAP والاسم. تأكد من اختيار ورقة المصنع.');
 
       const asText = (v: any) => v instanceof Date ? v.toISOString().slice(0,10) : String(v ?? '').trim();
+      const asISODate = (v: any) => {
+        if (v instanceof Date) return v.toISOString().slice(0,10);
+        const s = String(v ?? '').trim();
+        if (!s) return '';
+        if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
+          const [y,m,d] = s.split('-'); return y + '-' + m.padStart(2,'0') + '-' + d.padStart(2,'0');
+        }
+        const m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+        if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+        return s;
+      };
       const rows = matrix.slice(headerIndex + 1).map((r: any[], i: number) => ({
         sap_no: asText(r[resolvedSapIdx]).replace(/\.0$/, ''),
         full_name: asText(r[resolvedNameIdx]),
@@ -145,7 +156,7 @@ export default function App() {
         section: sectionIdx >= 0 ? asText(r[sectionIdx]) : '',
         job_title: jobIdx >= 0 ? asText(r[jobIdx]) : '',
         shift: shiftIdx >= 0 ? asText(r[shiftIdx]) : '',
-        hire_date: hireIdx >= 0 ? asText(r[hireIdx]) : '',
+        hire_date: hireIdx >= 0 ? asISODate(r[hireIdx]) : '',
         source_row: headerIndex + i + 2
       })).filter((r: any) => r.sap_no && r.full_name);
       const unique = new Map<string, any>();
