@@ -22,3 +22,23 @@
 @keyframes splashFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes splashRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.splash-screen,.splash-content{animation:none}}
+
+
+/* Splash refresh: factory identity leads, creator signature stays subtle */
+.splash-screen{background:radial-gradient(ellipse at 50% 40%,#32191f 0%,#1a0f12 56%,#10090b 100%);padding:22px}
+.splash-content{width:min(100%,680px);min-height:min(68vh,560px);justify-content:center;position:relative}
+.splash-motto{font-family:"Noto Naskh Arabic","Amiri","Traditional Arabic",serif;font-size:clamp(48px,8vw,82px);font-weight:900;line-height:1.45;letter-spacing:-2px;color:#f9e6d1;text-shadow:0 3px 0 #8b1e3f,0 8px 28px #0009;position:relative;isolation:isolate}
+.splash-motto:after{content:"";position:absolute;z-index:-1;inset:18% -7% 7%;background:linear-gradient(110deg,transparent 5%,#f5c45120 48%,transparent 90%);transform:skewY(-5deg);border-top:1px solid #f5c45155;border-bottom:1px solid #f5c45133}
+.splash-ornament{display:flex;align-items:center;justify-content:center;gap:12px;width:min(300px,70%);margin:18px auto 26px}
+.splash-ornament span{height:1px;flex:1;background:linear-gradient(90deg,transparent,#f5c451)}
+.splash-ornament span:last-child{background:linear-gradient(90deg,#f5c451,transparent)}
+.splash-ornament i{width:10px;height:10px;background:#f5c451;transform:rotate(45deg);box-shadow:0 0 18px #f5c45155}
+.splash-factory{font-family:"Noto Naskh Arabic","Amiri","Traditional Arabic",serif;font-size:clamp(34px,5.5vw,54px);font-weight:900;line-height:1.5;color:#f5c451;text-shadow:0 4px 18px #0008;letter-spacing:.2px}
+.splash-factory bdi{display:inline-block;font-family:Arial,sans-serif;font-size:.82em;font-weight:900;color:#f9e6d1;border:1px solid #f5c45188;border-radius:9px;padding:0 12px;margin-inline-start:8px;transform:skew(-5deg)}
+.splash-subtitle{font-size:15px;font-weight:800;color:#f9e6d1;margin-top:16px;letter-spacing:.4px}
+.splash-promise{font-size:12px;color:#f5c451;margin:7px 0 0}
+.splash-credit{position:absolute;bottom:-clamp(90px,15vh,130px);width:auto;display:flex;align-items:center;justify-content:center;gap:7px;border:0;padding:0;font-size:9px;color:#a99590;opacity:.82}
+.splash-credit strong{font-size:9px;color:#c6a24d;font-weight:600}
+.splash-mini-logo{width:19px;height:19px;object-fit:contain;border-radius:5px;opacity:.85}
+@media(max-height:620px){.splash-content{min-height:0}.splash-motto{font-size:42px}.splash-ornament{margin:8px auto 12px}.splash-factory{font-size:32px}.splash-subtitle{margin-top:7px}.splash-credit{bottom:-65px}}
+@media(prefers-reduced-motion:reduce){.splash-screen,.splash-content{animation:none}}
