@@ -9,7 +9,7 @@ const statusLabel: Record<Complaint['status'], string> = { new: 'جديدة', in
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
-  useEffect(() => { const timer = window.setTimeout(() => setShowSplash(false), 2600); return () => window.clearTimeout(timer); }, []);
+  useEffect(() => { const timer = window.setTimeout(() => setShowSplash(false), 3000); return () => window.clearTimeout(timer); }, []);
   const [sap, setSap] = useState('');
   const [portalToken, setPortalToken] = useState('');
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -274,7 +274,7 @@ export default function App() {
   const goHome = () => { setView('home'); setEmployee(null); setAdminAuthed(false); setError(''); setNotice(''); };
 
   return <div className="app-shell">
-    {showSplash && <div className="splash-screen" role="status" aria-label="شكاوى العاملين"><div className="splash-content"><img src="/fayez-mark.svg" alt="Eng. Mohamed Fayez" className="splash-logo"/><div className="splash-name">ENG. MOHAMED <span>FAYEZ</span></div><div className="splash-divider"><i/></div><h1>شكاوى العاملين</h1><p>صوتك مسموع • وحقك محفوظ</p><div className="splash-credit">تطوير وإشراف <strong>Eng. Mohamed Fayez</strong></div></div></div>}
+    {showSplash && <div className="splash-screen" role="status" aria-label="شكاوى العاملين"><div className="splash-content"><div className="splash-motto" lang="ar" dir="rtl">صُنّاع الثقة</div><div className="splash-ornament"><span/><i/><span/></div><div className="splash-factory" lang="ar" dir="rtl">مصنع الثلاجة <bdi>A</bdi></div><div className="splash-subtitle">شكاوى العاملين</div><p className="splash-promise">صوتك مسموع • وحقك محفوظ</p><div className="splash-credit"><img src="/fayez-mark.svg" alt="" className="splash-mini-logo"/><span>تطوير وإشراف <strong>Eng. Mohamed Fayez</strong></span></div></div></div>}
     <header className="topbar">
       <div className="brand-mark"><MessageCircle size={24} strokeWidth={2.4}/></div>
       <div className="brand-copy"><strong>شكاوى العاملين</strong><span>صوتك مسموع • وحقك محفوظ</span></div>
