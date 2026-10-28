@@ -276,8 +276,8 @@ export default function App() {
   return <div className="app-shell">
     {showSplash && <div className="splash-screen" role="status" aria-label="شكاوى العاملين"><div className="splash-content"><div className="splash-motto" lang="ar" dir="rtl">العربى <span>صُنّاع الثقة</span></div><div className="splash-ornament"><span/><i/><span/></div><div className="splash-factory" lang="ar" dir="rtl">مصنع الثلاجة <bdi>A</bdi></div><div className="splash-subtitle">شكاوى العاملين</div><p className="splash-promise">صوتك مسموع • وحقك محفوظ</p><div className="splash-credit"><img src="/fayez-mark.svg" alt="" className="splash-mini-logo"/><span>تطوير وإشراف <strong>Eng. Mohamed Fayez</strong></span></div></div></div>}
     <header className="topbar">
-      <div className="brand-mark"><MessageCircle size={24} strokeWidth={2.4}/></div>
-      <div className="brand-copy"><strong>شكاوى العاملين</strong><span>صوتك مسموع • وحقك محفوظ</span></div>
+      <div className="brand-mark"><img src="/factory-a-icon.svg" alt="شعار مصنع الثلاجة A" /></div>
+      <div className="brand-copy"><strong>شكاوى العاملين</strong><span className="factory-brand-name">مصنع الثلاجة <bdi>A</bdi></span><span className="brand-tagline">صوتك مسموع • وحقك محفوظ</span></div>
       <button className="icon-button" aria-label="معلومات" onClick={() => setNotice('نظام داخلي لتقديم الشكاوى ومتابعة الردود.') }><CircleHelp size={21}/></button>
     </header>
 
