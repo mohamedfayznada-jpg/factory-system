@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { ArrowRight, Bell, CheckCircle2, ChevronLeft, CircleHelp, ClipboardList, FileText, LockKeyhole, LogIn, MessageCircle, Plus, Search, ShieldCheck, UserRound, X } from 'lucide-react';
 import { supabase, supabaseConfigured } from './lib/supabase';
 
@@ -23,6 +24,8 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importProgress, setImportProgress] = useState('');
   const [newSubject, setNewSubject] = useState('');
   const [newBody, setNewBody] = useState('');
   const [busy, setBusy] = useState(false);
@@ -107,6 +110,52 @@ export default function App() {
     const { data, error: loadError } = await supabase.rpc('admin_list_complaints', { p_token: token });
     if (loadError) { setError(loadError.message); return; }
     setAllComplaints((data ?? []) as (Complaint & { employee?: Employee })[]);
+  }
+
+  async function importEmployees() {
+    setError(''); setNotice(''); setImportProgress('');
+    if (!supabase || !adminAuthed || !portalToken) { setError('سجّل دخولك كمسؤول أولًا.'); return; }
+    if (!importFile) { setError('اختر ملف Excel أولًا.'); return; }
+    setBusy(true);
+    try {
+      const buffer = await importFile.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+      const sheet = workbook.Sheets['المصنع'] || workbook.Sheets[workbook.SheetNames[0]];
+      if (!sheet) throw new Error('الملف لا يحتوي على ورقة بيانات.');
+      const matrix = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '', raw: false });
+      const headerIndex = matrix.findIndex(row => row.some((v: any) => String(v).includes('رقم الساب')));
+      if (headerIndex < 0) throw new Error('لم أجد عمود رقم الساب في الملف.');
+      const headers = matrix[headerIndex].map((v: any) => String(v ?? '').trim());
+      const col = (part: string) => headers.findIndex((h: string) => h.includes(part));
+      const sapIdx = col('رقم الساب'), nameIdx = col('الإسم') >= 0 ? col('الإسم') : col('الاسم');
+      const deptIdx = col('الإدارة'), sectionIdx = col('القسم'), jobIdx = col('الوظيفه'), shiftIdx = col('الورديه'), hireIdx = col('تاريخ التعيين');
+      if ([sapIdx, nameIdx].some(i => i < 0)) throw new Error('الملف لا يحتوي على عمودي رقم الساب والاسم.');
+      const asText = (v: any) => v instanceof Date ? v.toISOString().slice(0,10) : String(v ?? '').trim();
+      const rows = matrix.slice(headerIndex + 1).map((r: any[], i: number) => ({
+        sap_no: asText(r[sapIdx]).replace(/\.0$/, ''),
+        full_name: asText(r[nameIdx]),
+        department: deptIdx >= 0 ? asText(r[deptIdx]) : '',
+        section: sectionIdx >= 0 ? asText(r[sectionIdx]) : '',
+        job_title: jobIdx >= 0 ? asText(r[jobIdx]) : '',
+        shift: shiftIdx >= 0 ? asText(r[shiftIdx]) : '',
+        hire_date: hireIdx >= 0 ? asText(r[hireIdx]) : '',
+        source_row: headerIndex + i + 2
+      })).filter((r: any) => r.sap_no && r.full_name);
+      const unique = new Map<string, any>();
+      for (const row of rows) unique.set(row.sap_no, row);
+      const data = [...unique.values()];
+      if (!data.length) throw new Error('لم أجد سجلات موظفين صالحة للاستيراد.');
+      let processed = 0;
+      for (let i = 0; i < data.length; i += 100) {
+        const batch = data.slice(i, i + 100);
+        const { data: result, error: rpcError } = await supabase.rpc('admin_import_employees', { p_token: portalToken, p_rows: batch });
+        if (rpcError) throw new Error('فشل رفع الدفعة ' + (Math.floor(i / 100) + 1) + ': ' + rpcError.message);
+        processed += Number(result?.processed ?? batch.length);
+        setImportProgress('تمت معالجة ' + processed + ' من ' + data.length + ' سجلًا…');
+      }
+      setNotice('اكتمل الاستيراد: ' + processed + ' سجلًا.'); setImportProgress('اكتمل الاستيراد: ' + processed + ' سجلًا.'); setImportFile(null);
+    } catch (e) { setError(e instanceof Error ? e.message : 'تعذر استيراد الملف.'); }
+    finally { setBusy(false); }
   }
 
   async function sendReply(id: string) {
@@ -196,6 +245,14 @@ export default function App() {
 
       {view === 'admin' && adminAuthed && <section className="stack">
         <div className="admin-title"><div><span className="eyebrow">ADMIN CONTROL</span><h1>إدارة الشكاوى</h1><p>متابعة الشكاوى والردود</p></div><button className="icon-button" onClick={goHome}><X size={20}/></button></div>
+        <section className="panel">
+          <div className="section-heading"><div className="heading-icon gold"><FileText size={20}/></div><div><h2>استيراد بيانات العاملين</h2><p>رفع ملف Excel وتحديث سجلات العاملين حسب رقم SAP</p></div></div>
+          <label htmlFor="employee-import">ملف Excel (.xlsx / .xls / .csv)</label>
+          <input id="employee-import" type="file" accept=".xlsx,.xls,.csv" onChange={e=>setImportFile(e.target.files?.[0] ?? null)} />
+          <p className="privacy-note"><LockKeyhole size={17}/><span>تُقرأ البيانات داخل المتصفح وتُرفع على دفعات. السجلات ذات رقم SAP الموجود تُحدّث بدلًا من تكرارها.</span></p>
+          <button className="primary-button" disabled={busy || !importFile} onClick={importEmployees}>{busy ? 'جارٍ الاستيراد…' : 'استيراد ملف العاملين'}<ArrowRight size={18}/></button>
+          {importProgress && <p>{importProgress}</p>}
+        </section>
         <div className="stats-row"><div><span>إجمالي الشكاوى</span><b>{allComplaints.length}</b></div><div><span>جديدة</span><b>{allComplaints.filter(c=>c.status==='new').length}</b></div><div><span>قيد المراجعة</span><b>{allComplaints.filter(c=>c.status==='in_review').length}</b></div></div>
         <div className="filter-row"><div className="input-wrap search-wrap"><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="بحث بالاسم أو SAP أو الشكوى"/></div><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">كل الحالات</option><option value="new">جديدة</option><option value="in_review">قيد المراجعة</option><option value="answered">تم الرد</option><option value="closed">مغلقة</option></select></div>
         {filtered.length === 0 ? <div className="empty-state panel"><ClipboardList size={28}/><b>لا توجد شكاوى مطابقة</b></div> : filtered.map(c=><article className="panel admin-complaint" key={c.id}><div className="complaint-top"><span className={'status status-' + c.status}>{statusLabel[c.status]}</span><time>{new Date(c.created_at).toLocaleString('ar-EG')}</time></div><h3>{c.subject}</h3><p>{c.body}</p><div className="worker-chip"><UserRound size={16}/><b>{c.employee?.full_name || 'عامل'}</b><span>SAP: {c.employee?.sap_no || '—'}</span></div><label>حالة الشكوى</label><select value={c.status} onChange={e=>changeStatus(c.id,e.target.value as Complaint['status'])}><option value="new">جديدة</option><option value="in_review">قيد المراجعة</option><option value="answered">تم الرد</option><option value="closed">مغلقة</option></select><label>الرد على الشكوى</label><textarea rows={3} value={replyDrafts[c.id] ?? ''} onChange={e=>setReplyDrafts(prev=>({...prev,[c.id]:e.target.value}))} placeholder="اكتب الرد هنا…"/><button className="primary-button" disabled={busy || !replyDrafts[c.id]?.trim()} onClick={()=>sendReply(c.id)}>حفظ الرد<ChevronLeft size={19}/></button></article>)}
