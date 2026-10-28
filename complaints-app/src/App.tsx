@@ -75,14 +75,14 @@ export default function App() {
       if (!data?.authorized || data?.role !== 'admin') throw new Error('بيانات دخول المسؤول غير صحيحة.');
       setPortalToken(data.token);
       setAdminAuthed(true); setView('admin'); setAdminOpen(false);
-      await loadAdminComplaints();
+      await loadAdminComplaints(data.token);
     } catch (e) { setError(e instanceof Error ? e.message : 'تعذر تسجيل الدخول.'); }
     finally { setBusy(false); }
   }
 
-  async function loadAdminComplaints() {
+  async function loadAdminComplaints(token = portalToken) {
     if (!supabase) return;
-    const { data, error: loadError } = await supabase.rpc('admin_list_complaints', { p_token: portalToken });
+    const { data, error: loadError } = await supabase.rpc('admin_list_complaints', { p_token: token });
     if (loadError) { setError(loadError.message); return; }
     setAllComplaints((data ?? []) as (Complaint & { employee?: Employee })[]);
   }
