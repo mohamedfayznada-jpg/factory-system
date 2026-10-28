@@ -133,6 +133,8 @@ export default function App() {
           <div className="section-heading"><div className="heading-icon"><UserRound size={20}/></div><div><h2>دخول العامل</h2><p>اكتب رقم SAP لعرض بياناتك</p></div></div>
           <label htmlFor="sap">رقم SAP</label>
           <div className="input-wrap"><UserRound size={18}/><input id="sap" inputMode="numeric" autoComplete="off" value={sap} onChange={e => setSap(e.target.value.replace(/\D/g,''))} onKeyDown={e => e.key === 'Enter' && findEmployee()} placeholder="مثال: 123456"/></div>
+          <label htmlFor="worker-pin">رمز الدخول الشخصي</label>
+          <input id="worker-pin" type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="رمز الدخول"/>
           <button className="primary-button" disabled={busy} onClick={findEmployee}>{busy ? 'جارٍ التحقق…' : 'عرض بياناتي'}<ChevronLeft size={19}/></button>
           <button className="admin-link" onClick={() => {setAdminOpen(true); setError('');}}> <ShieldCheck size={17}/> دخول المسؤول</button>
         </section>
