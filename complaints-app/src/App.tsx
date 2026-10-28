@@ -11,6 +11,9 @@ export default function App() {
   const [portalToken, setPortalToken] = useState('');
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [showHistoryConfirm, setShowHistoryConfirm] = useState(false);
+  const [historyVerified, setHistoryVerified] = useState(false);
+  const [hireDate, setHireDate] = useState('');
   const [view, setView] = useState<'home' | 'employee' | 'admin'>('home');
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminSap, setAdminSap] = useState('');
@@ -45,9 +48,28 @@ export default function App() {
       if (rpcError) throw rpcError;
       if (!data?.employee) throw new Error('لم يتم العثور على العامل. راجع رقم SAP مع شؤون العاملين.');
       setEmployee(data.employee as Employee);
-      setComplaints((data.complaints ?? []) as Complaint[]);
+      setComplaints([]);
+      setShowHistoryConfirm(false); setHistoryVerified(false); setHireDate('');
       setView('employee');
     } catch (e) { setError(e instanceof Error ? e.message : 'تعذر تحميل البيانات.'); }
+    finally { setBusy(false); }
+  }
+
+  async function loadHistoricalComplaints() {
+    setError(''); setNotice('');
+    if (!hireDate) { setError('اكتب تاريخ تعيينك أولًا.'); return; }
+    if (!supabase || !employee) { setError('تعذر الاتصال بقاعدة البيانات.'); return; }
+    setBusy(true);
+    try {
+      const { data, error: historyError } = await supabase.rpc('employee_historical_complaints', {
+        p_sap_no: employee.sap_no, p_token: portalToken, p_hire_date: hireDate
+      });
+      if (historyError) throw historyError;
+      setComplaints((data ?? []) as Complaint[]);
+      setHistoryVerified(true);
+      setShowHistoryConfirm(false);
+      setNotice('تم التأكد من تاريخ التعيين. يمكنك الآن مشاهدة شكاواك السابقة.');
+    } catch (e) { setError(e instanceof Error ? e.message : 'تعذر التحقق من تاريخ التعيين.'); }
     finally { setBusy(false); }
   }
 
@@ -157,8 +179,18 @@ export default function App() {
           <button className="primary-button" disabled={busy} onClick={submitComplaint}>{busy ? 'جارٍ الإرسال…' : 'إرسال الشكوى'}<ChevronLeft size={19}/></button>
         </section>
         <section className="panel">
-          <div className="section-heading"><div className="heading-icon gold"><FileText size={20}/></div><div><h2>شكاواي السابقة</h2><p>{complaints.length} شكوى مسجلة</p></div></div>
-          {complaints.length === 0 ? <div className="empty-state"><ClipboardList size={28}/><b>مفيش شكاوى سابقة</b><span>أي شكوى تقدمها هتظهر هنا لمتابعة حالتها.</span></div> : <div className="complaint-list">{complaints.map(c => <article className="complaint-card" key={c.id}><div className="complaint-top"><span className={'status status-' + c.status}>{statusLabel[c.status]}</span><time>{new Date(c.created_at).toLocaleDateString('ar-EG')}</time></div><h3>{c.subject}</h3><p>{c.body}</p>{c.replies?.map((r,i) => <div className="reply-box" key={i}><b><MessageCircle size={15}/> رد المسؤول</b><p>{r.body}</p><small>{new Date(r.created_at).toLocaleDateString('ar-EG')}</small></div>)}</article>)}</div>}
+          <div className="section-heading"><div className="heading-icon gold"><FileText size={20}/></div><div><h2>شكاواي السابقة</h2><p>{historyVerified ? `${complaints.length} شكوى مسجلة` : 'تأكيد إضافي قبل عرض الشكاوى'}</p></div></div>
+          {!historyVerified ? <>
+            <div className="privacy-note"><LockKeyhole size={17}/><span>لحماية خصوصيتك، أكّد تاريخ تعيينك قبل عرض الشكاوى السابقة.</span></div>
+            {!showHistoryConfirm ? <button className="primary-button" onClick={() => {setShowHistoryConfirm(true); setHireDate('');}}>عرض شكاواي السابقة<ChevronLeft size={19}/></button> : <>
+              <label htmlFor="hire-date">تاريخ التعيين</label>
+              <input id="hire-date" type="date" value={hireDate} onChange={e => setHireDate(e.target.value} max={new Date().toISOString().slice(0,10)} />
+              <button className="primary-button" disabled={busy || !hireDate} onClick={loadHistoricalComplaints}>{busy ? 'جارٍ التحقق…' : 'تأكيد ومشاهدة الشكاوى'}<ShieldCheck size={18}/></button>
+              <button className="admin-link" onClick={() => setShowHistoryConfirm(false)}>إلغاء</button>
+            </>}
+          </> : <>
+            {complaints.length === 0 ? <div className="empty-state"><ClipboardList size={28}/><b>مفيش شكاوى سابقة</b><span>أي شكوى تقدمها هتظهر هنا لمتابعة حالتها.</span></div> : <div className="complaint-list">{complaints.map(c => <article className="complaint-card" key={c.id}><div className="complaint-top"><span className={'status status-' + c.status}>{statusLabel[c.status]}</span><time>{new Date(c.created_at).toLocaleDateString('ar-EG')}</time></div><h3>{c.subject}</h3><p>{c.body}</p>{c.replies?.map((r,i) => <div className="reply-box" key={i}><b><MessageCircle size={15}/> رد المسؤول</b><p>{r.body}</p><small>{new Date(r.created_at).toLocaleDateString('ar-EG')}</small></div>)}</article>)}</div>}
+          </>}
         </section>
       </section>}
 
