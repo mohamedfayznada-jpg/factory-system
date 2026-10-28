@@ -184,7 +184,7 @@ export default function App() {
             <div className="privacy-note"><LockKeyhole size={17}/><span>لحماية خصوصيتك، أكّد تاريخ تعيينك قبل عرض الشكاوى السابقة.</span></div>
             {!showHistoryConfirm ? <button className="primary-button" onClick={() => {setShowHistoryConfirm(true); setHireDate('');}}>عرض شكاواي السابقة<ChevronLeft size={19}/></button> : <>
               <label htmlFor="hire-date">تاريخ التعيين</label>
-              <input id="hire-date" type="date" value={hireDate} onChange={e => setHireDate(e.target.value} max={new Date().toISOString().slice(0,10)} />
+              <input id="hire-date" type="date" value={hireDate} onChange={e => setHireDate(e.target.value)} max={new Date().toISOString().slice(0,10)} />
               <button className="primary-button" disabled={busy || !hireDate} onClick={loadHistoricalComplaints}>{busy ? 'جارٍ التحقق…' : 'تأكيد ومشاهدة الشكاوى'}<ShieldCheck size={18}/></button>
               <button className="admin-link" onClick={() => setShowHistoryConfirm(false)}>إلغاء</button>
             </>}
