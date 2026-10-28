@@ -58,14 +58,24 @@ export default function App() {
     finally { setBusy(false); }
   }
 
+  function parseHireDateInput(value: string): string | null {
+    const m = value.trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+    if (!m) return null;
+    const day = Number(m[1]), month = Number(m[2]), year = Number(m[3]);
+    const d = new Date(Date.UTC(year, month - 1, day));
+    if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
+    return year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+  }
+
   async function loadHistoricalComplaints() {
     setError(''); setNotice('');
-    if (!hireDate) { setError('اكتب تاريخ تعيينك أولًا.'); return; }
+    const normalizedHireDate = parseHireDateInput(hireDate);
+    if (!normalizedHireDate) { setError('اكتب تاريخ التعيين بصيغة يوم/شهر/سنة، مثال: 14/05/2018.'); return; }
     if (!supabase || !employee) { setError('تعذر الاتصال بقاعدة البيانات.'); return; }
     setBusy(true);
     try {
       const { data, error: historyError } = await supabase.rpc('employee_historical_complaints', {
-        p_sap_no: employee.sap_no, p_token: portalToken, p_hire_date: hireDate
+        p_sap_no: employee.sap_no, p_token: portalToken, p_hire_date: normalizedHireDate
       });
       if (historyError) throw historyError;
       setComplaints((data ?? []) as Complaint[]);
@@ -251,7 +261,7 @@ export default function App() {
             <div className="privacy-note"><LockKeyhole size={17}/><span>لحماية خصوصيتك، أكّد تاريخ تعيينك قبل عرض الشكاوى السابقة.</span></div>
             {!showHistoryConfirm ? <button className="primary-button" onClick={() => {setShowHistoryConfirm(true); setHireDate('');}}>عرض شكاواي السابقة<ChevronLeft size={19}/></button> : <>
               <label htmlFor="hire-date">تاريخ التعيين</label>
-              <input id="hire-date" type="date" value={hireDate} onChange={e => setHireDate(e.target.value)} max={new Date().toISOString().slice(0,10)} />
+              <input id="hire-date" type="text" inputMode="numeric" dir="ltr" value={hireDate} onChange={e => setHireDate(e.target.value)} placeholder="يوم/شهر/سنة — مثال 14/05/2018" autoComplete="off" />
               <button className="primary-button" disabled={busy || !hireDate} onClick={loadHistoricalComplaints}>{busy ? 'جارٍ التحقق…' : 'تأكيد ومشاهدة الشكاوى'}<ShieldCheck size={18}/></button>
               <button className="admin-link" onClick={() => setShowHistoryConfirm(false)}>إلغاء</button>
             </>}
