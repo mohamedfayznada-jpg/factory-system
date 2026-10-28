@@ -126,14 +126,21 @@ export default function App() {
       const headerIndex = matrix.findIndex(row => row.some((v: any) => String(v).includes('رقم الساب')));
       if (headerIndex < 0) throw new Error('لم أجد عمود رقم الساب في الملف.');
       const headers = matrix[headerIndex].map((v: any) => String(v ?? '').trim());
-      const col = (part: string) => headers.findIndex((h: string) => h.includes(part));
-      const sapIdx = col('رقم الساب'), nameIdx = col('الإسم') >= 0 ? col('الإسم') : col('الاسم');
-      const deptIdx = col('الإدارة'), sectionIdx = col('القسم'), jobIdx = col('الوظيفه'), shiftIdx = col('الورديه'), hireIdx = col('تاريخ التعيين');
-      if ([sapIdx, nameIdx].some(i => i < 0)) throw new Error('الملف لا يحتوي على عمودي رقم الساب والاسم.');
+      const normalizeHeader = (v: any) => String(v ?? '').replace(/[ـ\u0640\sًٌٍَُِّْ]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').toLowerCase();
+      const normalizedHeaders = headers.map(normalizeHeader);
+      const col = (...parts: string[]) => normalizedHeaders.findIndex((h: string) => parts.some(p => h.includes(normalizeHeader(p))));
+      // Prefer header matching, with known workbook column positions as a safe fallback.
+      const sapIdx = col('رقم الساب', 'رقمSAP', 'SAP');
+      const nameIdx = col('الاسم', 'الإسم', 'اسم العامل', 'اسم الموظف');
+      const deptIdx = col('الإدارة'), sectionIdx = col('القسم'), jobIdx = col('الوظيفه', 'الوظيفة'), shiftIdx = col('الورديه', 'الوردية'), hireIdx = col('تاريخ التعيين');
+      const resolvedSapIdx = sapIdx >= 0 ? sapIdx : 1;
+      const resolvedNameIdx = nameIdx >= 0 ? nameIdx : 2;
+      if (!headers[resolvedSapIdx] || !headers[resolvedNameIdx]) throw new Error('لم أستطع تحديد عمودي SAP والاسم. تأكد من اختيار ورقة المصنع.');
+
       const asText = (v: any) => v instanceof Date ? v.toISOString().slice(0,10) : String(v ?? '').trim();
       const rows = matrix.slice(headerIndex + 1).map((r: any[], i: number) => ({
-        sap_no: asText(r[sapIdx]).replace(/\.0$/, ''),
-        full_name: asText(r[nameIdx]),
+        sap_no: asText(r[resolvedSapIdx]).replace(/\.0$/, ''),
+        full_name: asText(r[resolvedNameIdx]),
         department: deptIdx >= 0 ? asText(r[deptIdx]) : '',
         section: sectionIdx >= 0 ? asText(r[sectionIdx]) : '',
         job_title: jobIdx >= 0 ? asText(r[jobIdx]) : '',
