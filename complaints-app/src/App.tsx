@@ -59,9 +59,13 @@ export default function App() {
   }
 
   function parseHireDateInput(value: string): string | null {
-    const m = value.trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
-    if (!m) return null;
-    const day = Number(m[1]), month = Number(m[2]), year = Number(m[3]);
+    const s = value.trim();
+    let year: number, month: number, day: number;
+    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    const dmy = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+    if (iso) { year = Number(iso[1]); month = Number(iso[2]); day = Number(iso[3]); }
+    else if (dmy) { day = Number(dmy[1]); month = Number(dmy[2]); year = Number(dmy[3]); }
+    else return null;
     const d = new Date(Date.UTC(year, month - 1, day));
     if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
     return year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
@@ -261,7 +265,7 @@ export default function App() {
             <div className="privacy-note"><LockKeyhole size={17}/><span>لحماية خصوصيتك، أكّد تاريخ تعيينك قبل عرض الشكاوى السابقة.</span></div>
             {!showHistoryConfirm ? <button className="primary-button" onClick={() => {setShowHistoryConfirm(true); setHireDate('');}}>عرض شكاواي السابقة<ChevronLeft size={19}/></button> : <>
               <label htmlFor="hire-date">تاريخ التعيين</label>
-              <input id="hire-date" type="text" inputMode="numeric" dir="ltr" value={hireDate} onChange={e => setHireDate(e.target.value)} placeholder="يوم/شهر/سنة — مثال 14/05/2018" autoComplete="off" />
+              <input id="hire-date" type="date" lang="en-GB" dir="ltr" value={hireDate} onChange={e => setHireDate(e.target.value)} max={new Date().toISOString().slice(0,10)} />
               <button className="primary-button" disabled={busy || !hireDate} onClick={loadHistoricalComplaints}>{busy ? 'جارٍ التحقق…' : 'تأكيد ومشاهدة الشكاوى'}<ShieldCheck size={18}/></button>
               <button className="admin-link" onClick={() => setShowHistoryConfirm(false)}>إلغاء</button>
             </>}
