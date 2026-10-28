@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "شكاوى العاملين | مصنع الثلاجة A",
+  "short_name": "مصنع الثلاجة A",
+  "description": "بوابة شكاوى العاملين - العربى صناع الثقة",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1A0F12",
+  "theme_color": "#1A0F12",
+  "icons": [
+    {
+      "src": "/factory-a-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
