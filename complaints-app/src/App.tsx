@@ -8,7 +8,6 @@ const statusLabel: Record<Complaint['status'], string> = { new: 'جديدة', in
 
 export default function App() {
   const [sap, setSap] = useState('');
-  const [pin, setPin] = useState('');
   const [portalToken, setPortalToken] = useState('');
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -38,9 +37,9 @@ export default function App() {
     if (!supabase || !supabaseConfigured) { setError('التطبيق مربوط بواجهة Supabase، لكن إعدادات المشروع لم تُضف بعد.'); return; }
     setBusy(true);
     try {
-      const { data: login, error: loginError } = await supabase.rpc('portal_login', { p_login_id: sap.trim(), p_password: pin });
+      const { data: login, error: loginError } = await supabase.rpc('portal_login', { p_login_id: sap.trim(), p_password: '' });
       if (loginError) throw loginError;
-      if (!login?.authorized || login?.role !== 'employee') throw new Error('رقم SAP أو رمز الدخول غير صحيح.');
+      if (!login?.authorized || login?.role !== 'employee') throw new Error('رقم SAP غير صحيح أو غير مسجل.');
       setPortalToken(login.token);
       const { data, error: rpcError } = await supabase.rpc('employee_portal_lookup', { p_sap_no: sap.trim(), p_token: login.token });
       if (rpcError) throw rpcError;
@@ -133,8 +132,6 @@ export default function App() {
           <div className="section-heading"><div className="heading-icon"><UserRound size={20}/></div><div><h2>دخول العامل</h2><p>اكتب رقم SAP لعرض بياناتك</p></div></div>
           <label htmlFor="sap">رقم SAP</label>
           <div className="input-wrap"><UserRound size={18}/><input id="sap" inputMode="numeric" autoComplete="off" value={sap} onChange={e => setSap(e.target.value.replace(/\D/g,''))} onKeyDown={e => e.key === 'Enter' && findEmployee()} placeholder="مثال: 123456"/></div>
-          <label htmlFor="worker-pin">رمز الدخول الشخصي</label>
-          <input id="worker-pin" type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="رمز الدخول"/>
           <button className="primary-button" disabled={busy} onClick={findEmployee}>{busy ? 'جارٍ التحقق…' : 'عرض بياناتي'}<ChevronLeft size={19}/></button>
           <button className="admin-link" onClick={() => {setAdminOpen(true); setError('');}}> <ShieldCheck size={17}/> دخول المسؤول</button>
         </section>
