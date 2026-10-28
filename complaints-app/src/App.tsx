@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { ArrowRight, Bell, CheckCircle2, ChevronLeft, CircleHelp, ClipboardList, FileText, LockKeyhole, LogIn, MessageCircle, Plus, Search, ShieldCheck, UserRound, X, Pencil, Trash2, Save } from 'lucide-react';
 import { supabase, supabaseConfigured } from './lib/supabase';
@@ -8,6 +8,8 @@ type Complaint = { id: string; subject: string; body: string; status: 'new' | 'i
 const statusLabel: Record<Complaint['status'], string> = { new: 'جديدة', in_review: 'قيد المراجعة', answered: 'تم الرد', closed: 'مغلقة' };
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
+  useEffect(() => { const timer = window.setTimeout(() => setShowSplash(false), 2600); return () => window.clearTimeout(timer); }, []);
   const [sap, setSap] = useState('');
   const [portalToken, setPortalToken] = useState('');
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -272,6 +274,7 @@ export default function App() {
   const goHome = () => { setView('home'); setEmployee(null); setAdminAuthed(false); setError(''); setNotice(''); };
 
   return <div className="app-shell">
+    {showSplash && <div className="splash-screen" role="status" aria-label="شكاوى العاملين"><div className="splash-content"><img src="/fayez-mark.svg" alt="Eng. Mohamed Fayez" className="splash-logo"/><div className="splash-name">ENG. MOHAMED <span>FAYEZ</span></div><div className="splash-divider"><i/></div><h1>شكاوى العاملين</h1><p>صوتك مسموع • وحقك محفوظ</p><div className="splash-credit">تطوير وإشراف <strong>Eng. Mohamed Fayez</strong></div></div></div>}
     <header className="topbar">
       <div className="brand-mark"><MessageCircle size={24} strokeWidth={2.4}/></div>
       <div className="brand-copy"><strong>شكاوى العاملين</strong><span>صوتك مسموع • وحقك محفوظ</span></div>
@@ -365,7 +368,7 @@ export default function App() {
       </section>}
     </main>
 
-    <footer className="footer"><span className="footer-dot"/><span>بوابة شكاوى العاملين</span><span className="footer-divider">•</span><span>بخصوصية ومسؤولية</span></footer>
+    <footer className="footer"><span className="footer-dot"/><span>بوابة شكاوى العاملين</span><span className="footer-divider">•</span><span>بخصوصية ومسؤولية</span><div className="creator-credit"><img src="/fayez-mark.svg" alt="" /><span>تصميم وتطوير <strong>Eng. Mohamed Fayez</strong></span></div></footer>
 
     {notice && <div className="toast success-toast"><CheckCircle2 size={18}/><span>{notice}</span><button onClick={()=>setNotice('')}><X size={16}/></button></div>}
     {error && <div className="toast error-toast"><Bell size={18}/><span>{error}</span><button onClick={()=>setError('')}><X size={16}/></button></div>}
